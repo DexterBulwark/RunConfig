@@ -9,7 +9,15 @@ interface RunConfiguration {
     type: 'custom' | 'jetbrains';
 }
 
+let statusBarItem: vscode.StatusBarItem;
+let currentConfig: RunConfiguration | undefined;
+
 export function activate(context: vscode.ExtensionContext) {
+    // Create status bar item
+    statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
+    statusBarItem.command = 'run-config.showRunConfigurations';
+    context.subscriptions.push(statusBarItem);
+
     // Show run configurations command
     let showConfigsDisposable = vscode.commands.registerCommand('run-config.showRunConfigurations', async () => {
         const configurations = await getRunConfigurations();
@@ -31,6 +39,8 @@ export function activate(context: vscode.ExtensionContext) {
         );
 
         if (selectedConfig) {
+            currentConfig = selectedConfig.config;
+            updateStatusBar();
             executeConfiguration(selectedConfig.config);
         }
     });
@@ -73,7 +83,41 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.window.showInformationMessage(`Added new configuration: ${name}`);
     });
 
-    context.subscriptions.push(showConfigsDisposable, addConfigDisposable);
+    // Add command to run current configuration
+    let runCurrentConfigDisposable = vscode.commands.registerCommand('run-config.runCurrentConfiguration', () => {
+        if (currentConfig) {
+            executeConfiguration(currentConfig);
+        } else {
+            vscode.commands.executeCommand('run-config.showRunConfigurations');
+        }
+    });
+
+    // Add keyboard shortcut for running current configuration
+    context.subscriptions.push(
+        vscode.commands.registerCommand('run-config.runCurrentConfiguration', () => {
+            if (currentConfig) {
+                executeConfiguration(currentConfig);
+            } else {
+                vscode.commands.executeCommand('run-config.showRunConfigurations');
+            }
+        })
+    );
+
+    // Initialize status bar
+    updateStatusBar();
+    statusBarItem.show();
+
+    context.subscriptions.push(showConfigsDisposable, addConfigDisposable, runCurrentConfigDisposable);
+}
+
+function updateStatusBar() {
+    if (currentConfig) {
+        statusBarItem.text = `$(play) ${currentConfig.name}`;
+        statusBarItem.tooltip = `Run: ${currentConfig.command}`;
+    } else {
+        statusBarItem.text = '$(play) No Run Configuration';
+        statusBarItem.tooltip = 'Select a run configuration';
+    }
 }
 
 async function getRunConfigurations(): Promise<RunConfiguration[]> {

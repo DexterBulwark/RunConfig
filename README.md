@@ -9,15 +9,29 @@ This extension provides a dropdown menu for preconfigured run commands, similar 
 - Custom run configurations through VS Code settings
 - Easy execution of commands in integrated terminal
 - Add new configurations through the UI
+- Status bar indicator showing current run configuration
+- Keyboard shortcuts for quick access
 
 ## Usage
 
 ### Running Configurations
 
-1. Press `Ctrl+Shift+P` (or `Cmd+Shift+P` on macOS)
-2. Type "Show Run Configurations" and select the command
-3. Choose a configuration from the dropdown menu
-4. The command will be executed in a new terminal
+You can run configurations in several ways:
+
+1. Using the status bar:
+   - Click the run configuration indicator in the status bar
+   - Select a configuration from the dropdown menu
+
+2. Using the command palette:
+   - Press `Ctrl+Shift+P` (or `Cmd+Shift+P` on macOS)
+   - Type "Show Run Configurations" and select the command
+   - Choose a configuration from the dropdown menu
+
+3. Using keyboard shortcuts:
+   - Press `Ctrl+Shift+R` (or `Cmd+Shift+R` on macOS) to run the current configuration
+   - If no configuration is selected, it will open the configuration selector
+
+The command will be executed in a new terminal, regardless of which file is currently open.
 
 ### Adding New Configurations
 
@@ -92,4 +106,18 @@ This extension contributes the following settings:
 
 ### 0.0.1
 
-Initial release of Run Configuration extension 
+Initial release of Run Configuration extension
+
+## Status Bar
+
+The extension adds a status bar item that shows:
+- The currently selected run configuration
+- A play icon indicating it's a run command
+- A tooltip showing the full command
+
+Clicking the status bar item will open the configuration selector.
+
+## Keyboard Shortcuts
+
+- `Ctrl+Shift+R` (Windows/Linux) or `Cmd+Shift+R` (macOS): Run the current configuration
+- If no configuration is selected, this will open the configuration selector 
