@@ -1,0 +1,141 @@
+import * as vscode from 'vscode';
+import * as fs from 'fs';
+import * as path from 'path';
+import * as xml2js from 'xml2js';
+
+interface RunConfiguration {
+    name: string;
+    command: string;
+    type: 'custom' | 'jetbrains';
+}
+
+export function activate(context: vscode.ExtensionContext) {
+    // Show run configurations command
+    let showConfigsDisposable = vscode.commands.registerCommand('run-config.showRunConfigurations', async () => {
+        const configurations = await getRunConfigurations();
+        
+        if (configurations.length === 0) {
+            vscode.window.showInformationMessage('No run configurations found');
+            return;
+        }
+
+        const selectedConfig = await vscode.window.showQuickPick(
+            configurations.map(config => ({
+                label: config.name,
+                description: config.command,
+                config
+            })),
+            {
+                placeHolder: 'Select a run configuration'
+            }
+        );
+
+        if (selectedConfig) {
+            executeConfiguration(selectedConfig.config);
+        }
+    });
+
+    // Add new configuration command
+    let addConfigDisposable = vscode.commands.registerCommand('run-config.addConfiguration', async () => {
+        const name = await vscode.window.showInputBox({
+            prompt: 'Enter a name for the configuration',
+            placeHolder: 'e.g., Start Development Server'
+        });
+
+        if (!name) {
+            return;
+        }
+
+        const command = await vscode.window.showInputBox({
+            prompt: 'Enter the command to run',
+            placeHolder: 'e.g., npm run dev'
+        });
+
+        if (!command) {
+            return;
+        }
+
+        const config: RunConfiguration = {
+            name,
+            command,
+            type: 'custom'
+        };
+
+        // Get current configurations
+        const configs = vscode.workspace.getConfiguration('runConfig').get<RunConfiguration[]>('customConfigurations') || [];
+        
+        // Add new configuration
+        configs.push(config);
+
+        // Save to settings
+        await vscode.workspace.getConfiguration('runConfig').update('customConfigurations', configs, vscode.ConfigurationTarget.Global);
+
+        vscode.window.showInformationMessage(`Added new configuration: ${name}`);
+    });
+
+    context.subscriptions.push(showConfigsDisposable, addConfigDisposable);
+}
+
+async function getRunConfigurations(): Promise<RunConfiguration[]> {
+    const configurations: RunConfiguration[] = [];
+    
+    // Get custom configurations from settings
+    const customConfigs = vscode.workspace.getConfiguration('runConfig').get<RunConfiguration[]>('customConfigurations') || [];
+    configurations.push(...customConfigs);
+
+    // Look for JetBrains run configurations
+    const workspaceFolders = vscode.workspace.workspaceFolders;
+    if (workspaceFolders) {
+        for (const folder of workspaceFolders) {
+            const jetbrainsConfigs = await findJetBrainsConfigurations(folder.uri.fsPath);
+            configurations.push(...jetbrainsConfigs);
+        }
+    }
+
+    return configurations;
+}
+
+async function findJetBrainsConfigurations(workspacePath: string): Promise<RunConfiguration[]> {
+    const configurations: RunConfiguration[] = [];
+    
+    // Look for .idea/runConfigurations directory
+    const runConfigDir = path.join(workspacePath, '.idea', 'runConfigurations');
+    
+    if (fs.existsSync(runConfigDir)) {
+        const files = fs.readdirSync(runConfigDir);
+        
+        for (const file of files) {
+            if (file.endsWith('.xml')) {
+                try {
+                    const content = fs.readFileSync(path.join(runConfigDir, file), 'utf8');
+                    const parser = new xml2js.Parser();
+                    const result = await parser.parseStringPromise(content);
+                    
+                    if (result.component && result.component.configuration) {
+                        const config = result.component.configuration[0];
+                        const name = config.option.find((opt: any) => opt.$.name === 'name')?.value[0] || path.basename(file, '.xml');
+                        const command = config.option.find((opt: any) => opt.$.name === 'scriptParameters')?.value[0] || '';
+                        
+                        configurations.push({
+                            name,
+                            command,
+                            type: 'jetbrains'
+                        });
+                    }
+                } catch (error) {
+                    console.error(`Error parsing JetBrains configuration file ${file}:`, error);
+                }
+            }
+        }
+    }
+    
+    return configurations;
+}
+
+function executeConfiguration(config: RunConfiguration) {
+    const terminal = vscode.window.createTerminal(config.name);
+    terminal.sendText(config.command);
+    terminal.show();
+}
+
+export function deactivate() {} 
