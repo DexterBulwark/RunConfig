@@ -6,8 +6,15 @@ const vscode = require("vscode");
 const fs = require("fs");
 const path = require("path");
 const xml2js = require("xml2js");
+let statusBarItem;
+let currentConfig;
 function activate(context) {
-    let disposable = vscode.commands.registerCommand('run-config.showRunConfigurations', async () => {
+    // Create status bar item
+    statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
+    statusBarItem.command = 'run-config.showRunConfigurations';
+    context.subscriptions.push(statusBarItem);
+    // Show run configurations command
+    let showConfigsDisposable = vscode.commands.registerCommand('run-config.showRunConfigurations', async () => {
         const configurations = await getRunConfigurations();
         if (configurations.length === 0) {
             vscode.window.showInformationMessage('No run configurations found');
@@ -21,10 +28,72 @@ function activate(context) {
             placeHolder: 'Select a run configuration'
         });
         if (selectedConfig) {
+            currentConfig = selectedConfig.config;
+            updateStatusBar();
             executeConfiguration(selectedConfig.config);
         }
     });
-    context.subscriptions.push(disposable);
+    // Add new configuration command
+    let addConfigDisposable = vscode.commands.registerCommand('run-config.addConfiguration', async () => {
+        const name = await vscode.window.showInputBox({
+            prompt: 'Enter a name for the configuration',
+            placeHolder: 'e.g., Start Development Server'
+        });
+        if (!name) {
+            return;
+        }
+        const command = await vscode.window.showInputBox({
+            prompt: 'Enter the command to run',
+            placeHolder: 'e.g., npm run dev'
+        });
+        if (!command) {
+            return;
+        }
+        const config = {
+            name,
+            command,
+            type: 'custom'
+        };
+        // Get current configurations
+        const configs = vscode.workspace.getConfiguration('runConfig').get('customConfigurations') || [];
+        // Add new configuration
+        configs.push(config);
+        // Save to settings
+        await vscode.workspace.getConfiguration('runConfig').update('customConfigurations', configs, vscode.ConfigurationTarget.Global);
+        vscode.window.showInformationMessage(`Added new configuration: ${name}`);
+    });
+    // Add command to run current configuration
+    let runCurrentConfigDisposable = vscode.commands.registerCommand('run-config.runCurrentConfiguration', () => {
+        if (currentConfig) {
+            executeConfiguration(currentConfig);
+        }
+        else {
+            vscode.commands.executeCommand('run-config.showRunConfigurations');
+        }
+    });
+    // Add keyboard shortcut for running current configuration
+    context.subscriptions.push(vscode.commands.registerCommand('run-config.runCurrentConfiguration', () => {
+        if (currentConfig) {
+            executeConfiguration(currentConfig);
+        }
+        else {
+            vscode.commands.executeCommand('run-config.showRunConfigurations');
+        }
+    }));
+    // Initialize status bar
+    updateStatusBar();
+    statusBarItem.show();
+    context.subscriptions.push(showConfigsDisposable, addConfigDisposable, runCurrentConfigDisposable);
+}
+function updateStatusBar() {
+    if (currentConfig) {
+        statusBarItem.text = `$(play) ${currentConfig.name}`;
+        statusBarItem.tooltip = `Run: ${currentConfig.command}`;
+    }
+    else {
+        statusBarItem.text = '$(play) No Run Configuration';
+        statusBarItem.tooltip = 'Select a run configuration';
+    }
 }
 async function getRunConfigurations() {
     const configurations = [];

@@ -2,6 +2,48 @@
 
 This extension provides a dropdown menu for preconfigured run commands, similar to JetBrains IDEs. It supports both custom configurations and JetBrains run configurations.
 
+## Installation
+
+### Manual Installation
+
+1. Download or clone this repository to your local machine
+
+2. Open a terminal in the extension directory and install dependencies:
+
+   ```bash
+   npm install
+   ```
+
+3. Build the extension:
+
+   ```bash
+   npm run compile
+   ```
+
+4. Create the VSIX package:
+
+   ```bash
+   npm run package
+   ```
+
+   This will create a file named `run-config-0.0.1.vsix` in the extension directory.
+
+5. Install the extension in VS Code:
+   - Open VS Code
+   - Press `Ctrl+Shift+P` (Windows/Linux) or `Cmd+Shift+P` (macOS)
+   - Type "Extensions: Install from VSIX"
+   - Navigate to the extension directory and select the `run-config-0.0.1.vsix` file
+
+### Installing in Cursor AI
+
+Since Cursor AI is built on VS Code, you can install the extension the same way:
+
+1. Follow the manual installation steps above
+2. Open Cursor AI
+3. Press `Ctrl+Shift+P` (Windows/Linux) or `Cmd+Shift+P` (macOS)
+4. Type "Extensions: Install from VSIX"
+5. Select the `run-config-0.0.1.vsix` file you created
+
 ## Features
 
 - Quick access to run configurations through a dropdown menu
@@ -95,7 +137,7 @@ The extension automatically detects and imports run configurations from JetBrain
 
 This extension contributes the following settings:
 
-* `runConfig.customConfigurations`: Array of custom run configurations
+- `runConfig.customConfigurations`: Array of custom run configurations
 
 ## Known Issues
 
@@ -111,6 +153,7 @@ Initial release of Run Configuration extension
 ## Status Bar
 
 The extension adds a status bar item that shows:
+
 - The currently selected run configuration
 - A play icon indicating it's a run command
 - A tooltip showing the full command
@@ -120,4 +163,4 @@ Clicking the status bar item will open the configuration selector.
 ## Keyboard Shortcuts
 
 - `Ctrl+Shift+R` (Windows/Linux) or `Cmd+Shift+R` (macOS): Run the current configuration
-- If no configuration is selected, this will open the configuration selector 
+- If no configuration is selected, this will open the configuration selector
