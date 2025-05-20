@@ -2,9 +2,6 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.deactivate = exports.activate = void 0;
 const vscode = require("vscode");
-const fs = require("fs");
-const path = require("path");
-const xml2js = require("xml2js");
 let statusBarItem;
 let currentConfig;
 function activate(context) {
@@ -19,21 +16,44 @@ function activate(context) {
     let showConfigsDisposable = vscode.commands.registerCommand('run-config.showRunConfigurations', async () => {
         const configurations = await getRunConfigurations();
         if (configurations.length === 0) {
-            vscode.window.showInformationMessage('No run configurations found');
+            const addConfig = await vscode.window.showInformationMessage('No run configurations found. Would you like to add one?', 'Yes', 'No');
+            if (addConfig === 'Yes') {
+                vscode.commands.executeCommand('run-config.addConfiguration');
+            }
             return;
         }
-        const selectedConfig = await vscode.window.showQuickPick(configurations.map(config => ({
-            label: config.name,
-            description: config.command,
-            config
-        })), {
+        // Group configurations by category
+        const groupedConfigs = configurations.reduce((groups, config) => {
+            const category = config.category || 'Other';
+            if (!groups[category]) {
+                groups[category] = [];
+            }
+            groups[category].push(config);
+            return groups;
+        }, {});
+        // Create quick pick items with categories
+        const items = Object.entries(groupedConfigs).flatMap(([category, configs]) => [
+            { label: category, kind: vscode.QuickPickItemKind.Separator },
+            ...configs.map(config => ({
+                label: config.name,
+                description: config.command,
+                detail: config.command,
+                config
+            }))
+        ]);
+        const selectedConfig = await vscode.window.showQuickPick(items, {
             placeHolder: 'Select a run configuration'
         });
-        if (selectedConfig) {
+        if (selectedConfig && 'config' in selectedConfig) {
             currentConfig = selectedConfig.config;
             updateStatusBar();
             executeConfiguration(selectedConfig.config);
         }
+    });
+    // Add refresh command
+    let refreshConfigsDisposable = vscode.commands.registerCommand('run-config.refreshConfigurations', async () => {
+        const configurations = await getRunConfigurations();
+        vscode.window.showInformationMessage(`Found ${configurations.length} run configurations`);
     });
     // Add new configuration command
     let addConfigDisposable = vscode.commands.registerCommand('run-config.addConfiguration', async () => {
@@ -66,7 +86,16 @@ function activate(context) {
         configs.push(config);
         // Save to workspace settings
         await vscode.workspace.getConfiguration('runConfig').update('customConfigurations', configs, vscode.ConfigurationTarget.Workspace);
-        vscode.window.showInformationMessage(`Added new configuration: ${name}`);
+        // Set as current configuration
+        currentConfig = config;
+        updateStatusBar();
+        const action = await vscode.window.showInformationMessage(`Added new configuration: ${name}`, 'Run Now', 'Add Another', 'Close');
+        if (action === 'Run Now') {
+            executeConfiguration(config);
+        }
+        else if (action === 'Add Another') {
+            vscode.commands.executeCommand('run-config.addConfiguration');
+        }
     });
     // Edit configuration command
     let editConfigDisposable = vscode.commands.registerCommand('run-config.editConfiguration', async () => {
@@ -177,7 +206,7 @@ function activate(context) {
     updateStatusBar();
     statusBarItem.show();
     // Add to subscriptions
-    context.subscriptions.push(showConfigsDisposable, addConfigDisposable, editConfigDisposable, removeConfigDisposable, runCurrentConfigDisposable);
+    context.subscriptions.push(showConfigsDisposable, addConfigDisposable, editConfigDisposable, removeConfigDisposable, runCurrentConfigDisposable, refreshConfigsDisposable);
     // Show status bar item
     statusBarItem.show();
 }
@@ -185,7 +214,7 @@ exports.activate = activate;
 function updateStatusBar() {
     if (currentConfig) {
         statusBarItem.text = `$(play) ${currentConfig.name}`;
-        statusBarItem.tooltip = `Run: ${currentConfig.command}`;
+        statusBarItem.tooltip = currentConfig.command;
     }
     else {
         statusBarItem.text = '$(play) No Run Configuration';
@@ -194,102 +223,21 @@ function updateStatusBar() {
     statusBarItem.show();
 }
 async function getRunConfigurations() {
-    const configurations = [];
     // Get custom configurations from settings
-    const customConfigs = vscode.workspace.getConfiguration('runConfig').get('customConfigurations') || [];
-    configurations.push(...customConfigs);
-    // Look for JetBrains run configurations
-    const workspaceFolders = vscode.workspace.workspaceFolders;
-    if (workspaceFolders) {
-        for (const folder of workspaceFolders) {
-            const jetbrainsConfigs = await findJetBrainsConfigurations(folder.uri.fsPath);
-            configurations.push(...jetbrainsConfigs);
-        }
-    }
-    return configurations;
-}
-async function findJetBrainsConfigurations(workspacePath) {
-    const configurations = [];
-    // Look for .idea/runConfigurations directory
-    const runConfigDir = path.join(workspacePath, '.idea', 'runConfigurations');
-    const workspaceXmlPath = path.join(workspacePath, '.idea', 'workspace.xml');
-    // Read configurations from runConfigurations directory
-    if (fs.existsSync(runConfigDir)) {
-        const files = fs.readdirSync(runConfigDir);
-        for (const file of files) {
-            if (file.endsWith('.xml')) {
-                try {
-                    const content = fs.readFileSync(path.join(runConfigDir, file), 'utf8');
-                    const parser = new xml2js.Parser();
-                    const result = await parser.parseStringPromise(content);
-                    if (result.component && result.component.configuration) {
-                        const config = result.component.configuration[0];
-                        const name = config.option.find((opt) => opt.$.name === 'name')?.value[0] || path.basename(file, '.xml');
-                        const command = config.option.find((opt) => opt.$.name === 'scriptParameters')?.value[0] || '';
-                        configurations.push({
-                            name,
-                            command,
-                            type: 'jetbrains'
-                        });
-                    }
-                }
-                catch (error) {
-                    console.error(`Error parsing JetBrains configuration file ${file}:`, error);
-                }
-            }
-        }
-    }
-    // Read configurations from workspace.xml
-    if (fs.existsSync(workspaceXmlPath)) {
-        try {
-            const content = fs.readFileSync(workspaceXmlPath, 'utf8');
-            const parser = new xml2js.Parser();
-            const result = await parser.parseStringPromise(content);
-            // Find RunManager component
-            const runManager = result.project?.component?.find((comp) => comp.$.name === 'RunManager');
-            if (runManager && runManager.configuration) {
-                for (const config of runManager.configuration) {
-                    try {
-                        const name = config.$.name;
-                        const type = config.$.type;
-                        let command = '';
-                        // Handle Python configurations
-                        if (type === 'PythonConfigurationType') {
-                            const scriptName = config.option.find((opt) => opt.$.name === 'SCRIPT_NAME')?.value[0];
-                            const parameters = config.option.find((opt) => opt.$.name === 'PARAMETERS')?.value[0] || '';
-                            const workingDir = config.option.find((opt) => opt.$.name === 'WORKING_DIRECTORY')?.value[0] || '';
-                            if (scriptName) {
-                                command = `python ${scriptName} ${parameters}`.trim();
-                                if (workingDir) {
-                                    command = `cd "${workingDir}" && ${command}`;
-                                }
-                            }
-                        }
-                        // Add support for other configuration types here if needed
-                        if (command) {
-                            configurations.push({
-                                name,
-                                command,
-                                type: 'jetbrains'
-                            });
-                        }
-                    }
-                    catch (error) {
-                        console.error(`Error parsing configuration in workspace.xml:`, error);
-                    }
-                }
-            }
-        }
-        catch (error) {
-            console.error('Error parsing workspace.xml:', error);
-        }
-    }
-    return configurations;
+    return vscode.workspace.getConfiguration('runConfig').get('customConfigurations') || [];
 }
 function executeConfiguration(config) {
-    const terminal = vscode.window.createTerminal(config.name);
-    terminal.sendText(config.command);
-    terminal.show();
+    try {
+        const terminal = vscode.window.createTerminal({
+            name: config.name,
+            env: config.env
+        });
+        terminal.sendText(config.command);
+        terminal.show();
+    }
+    catch (error) {
+        vscode.window.showErrorMessage(`Failed to execute configuration: ${error.message}`);
+    }
 }
 function deactivate() { }
 exports.deactivate = deactivate;
