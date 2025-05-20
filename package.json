@@ -1,0 +1,106 @@
+{
+    "name": "run-config",
+    "displayName": "Run Configuration",
+    "description": "Dropdown menu for preconfigured run commands",
+    "version": "0.0.1",
+    "publisher": "bulwark",
+    "icon": "images/icon.png",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/DexterBulwark/RunConfig.git"
+    },
+    "license": "MIT",
+    "engines": {
+        "vscode": "^1.60.0"
+    },
+    "categories": [
+        "Other"
+    ],
+    "activationEvents": [
+        "onStartupFinished"
+    ],
+    "main": "./out/extension.js",
+    "contributes": {
+        "commands": [
+            {
+                "command": "run-config.showRunConfigurations",
+                "title": "Run Config: Show Run Configurations"
+            },
+            {
+                "command": "run-config.addConfiguration",
+                "title": "Run Config: Add Configuration"
+            },
+            {
+                "command": "run-config.editConfiguration",
+                "title": "Run Config: Edit Configuration"
+            },
+            {
+                "command": "run-config.removeConfiguration",
+                "title": "Run Config: Remove Configuration"
+            },
+            {
+                "command": "run-config.runCurrentConfiguration",
+                "title": "Run Config: Run Current Configuration"
+            },
+            {
+                "command": "run-config.refreshConfigurations",
+                "title": "Run Config: Refresh Configurations"
+            }
+        ],
+        "keybindings": [
+            {
+                "command": "run-config.runCurrentConfiguration",
+                "key": "ctrl+shift+r",
+                "mac": "cmd+shift+r",
+                "when": "editorTextFocus"
+            },
+            {
+                "command": "run-config.showRunConfigurations",
+                "key": "ctrl+shift+c",
+                "mac": "cmd+shift+c",
+                "when": "editorTextFocus"
+            },
+            {
+                "command": "run-config.addConfiguration",
+                "key": "ctrl+shift+a",
+                "mac": "cmd+shift+a",
+                "when": "editorTextFocus"
+            }
+        ],
+        "configuration": {
+            "title": "Run Configuration",
+            "properties": {
+                "runConfig.customConfigurations": {
+                    "type": "array",
+                    "default": [],
+                    "description": "Custom run configurations"
+                }
+            }
+        }
+    },
+    "scripts": {
+        "vscode:prepublish": "npm run compile",
+        "compile": "tsc -p ./",
+        "watch": "tsc -watch -p ./",
+        "pretest": "npm run compile && npm run lint",
+        "lint": "eslint src --ext ts",
+        "test": "node ./out/test/runTest.js",
+        "package": "vsce package",
+        "generate-icon": "node scripts/generate-icon.js"
+    },
+    "devDependencies": {
+        "@types/glob": "^7.1.3",
+        "@types/mocha": "^8.2.2",
+        "@types/node": "14.x",
+        "@types/vscode": "^1.60.0",
+        "@typescript-eslint/eslint-plugin": "^4.26.0",
+        "@typescript-eslint/parser": "^4.26.0",
+        "@vscode/vsce": "^2.24.0",
+        "eslint": "^7.27.0",
+        "glob": "^7.1.7",
+        "mocha": "^8.4.0",
+        "sharp": "^0.34.1",
+        "typescript": "^4.3.2",
+        "vscode-test": "^1.5.2"
+    }
+}

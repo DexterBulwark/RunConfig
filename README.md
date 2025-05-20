@@ -2,6 +2,38 @@
 
 This extension provides a dropdown menu for preconfigured run commands, similar to JetBrains IDEs. It allows you to save and quickly access your commonly used run commands, and also supports importing configurations from JetBrains run configurations.
 
+## Installation
+
+### Manual Installation
+
+1. Download or clone this repository to your local machine
+
+2. Open a terminal in the extension directory and install dependencies:
+
+   ```bash
+   npm install
+   ```
+
+3. Build the extension:
+
+   ```bash
+   npm run compile
+   ```
+
+4. Create the VSIX package:
+
+   ```bash
+   npm run package
+   ```
+
+   This will create a file named `run-config-0.0.1.vsix` in the extension directory.
+
+5. Install the extension in VS Code:
+   - Open VS Code
+   - Press `Ctrl+Shift+P` (Windows/Linux) or `Cmd+Shift+P` (macOS)
+   - Type "Extensions: Install from VSIX"
+   - Navigate to the extension directory and select the `run-config-0.0.1.vsix` file
+
 ## Features
 
 - Dropdown menu for selecting run configurations
@@ -31,22 +63,9 @@ Run configurations are stored in your workspace's `.vscode/settings.json` file. 
 - Each project can have its own set of run configurations
 - The configurations will persist with the project
 
-## JetBrains Support
-
-The extension can import run configurations from JetBrains IDEs. It looks for configurations in two locations:
-
-1. `.idea/runConfigurations/*.xml` files
-2. `.idea/workspace.xml` file
-
-Currently supported JetBrains configuration types:
-
-- Python configurations (with working directory and parameters)
-- More types coming soon!
-
 ## Requirements
 
 - VS Code 1.60.0 or higher
-- For JetBrains configuration support: `.idea` directory in your project
 
 ## Extension Settings
 
@@ -57,8 +76,26 @@ This extension contributes the following settings:
 
 ## Keyboard Shortcuts
 
-- `Ctrl+Shift+R` (Windows/Linux) or `Cmd+Shift+R` (macOS): Run the current configuration
-- If no configuration is selected, this will open the configuration selector
+The extension provides several keyboard shortcuts for quick access to its features:
+
+| Action | Windows/Linux | macOS |
+|--------|--------------|-------|
+| Run current configuration | `Ctrl+Shift+R` | `Cmd+Shift+R` |
+| Show all configurations | `Ctrl+Shift+C` | `Cmd+Shift+C` |
+| Add new configuration | `Ctrl+Shift+A` | `Cmd+Shift+A` |
+
+All shortcuts are available when you have focus in the editor.
+
+## Commands
+
+The extension provides the following commands:
+
+- `Run Config: Show Run Configurations` - Display all available configurations
+- `Run Config: Add Configuration` - Create a new run configuration
+- `Run Config: Edit Configuration` - Modify an existing configuration
+- `Run Config: Remove Configuration` - Delete a configuration
+- `Run Config: Run Current Configuration` - Execute the currently selected configuration
+- `Run Config: Refresh Configurations` - Reload all configurations
 
 ## Known Issues
 
@@ -71,7 +108,6 @@ This extension contributes the following settings:
 Initial release of Run Configuration Extension:
 
 - Basic run configuration support
-- JetBrains configuration import (both `.run` files and `workspace.xml`)
 - Status bar integration
 - Configuration management UI
 - Keyboard shortcuts
