@@ -12,6 +12,12 @@ function activate(context) {
     statusBarItem.tooltip = 'Select a run configuration';
     statusBarItem.show();
     context.subscriptions.push(statusBarItem);
+    // Load last used configuration
+    const lastConfig = context.globalState.get('lastRunConfig');
+    if (lastConfig) {
+        currentConfig = lastConfig;
+        updateStatusBar();
+    }
     // Show run configurations command
     let showConfigsDisposable = vscode.commands.registerCommand('run-config.showRunConfigurations', async () => {
         const configurations = await getRunConfigurations();
@@ -46,6 +52,8 @@ function activate(context) {
         });
         if (selectedConfig && 'config' in selectedConfig) {
             currentConfig = selectedConfig.config;
+            // Save the selected configuration
+            await context.globalState.update('lastRunConfig', currentConfig);
             updateStatusBar();
             executeConfiguration(selectedConfig.config);
         }
@@ -88,6 +96,8 @@ function activate(context) {
         await vscode.workspace.getConfiguration('runConfig').update('customConfigurations', configs, vscode.ConfigurationTarget.Workspace);
         // Set as current configuration
         currentConfig = config;
+        // Save the selected configuration
+        await context.globalState.update('lastRunConfig', currentConfig);
         updateStatusBar();
         const action = await vscode.window.showInformationMessage(`Added new configuration: ${name}`, 'Run Now', 'Add Another', 'Close');
         if (action === 'Run Now') {
@@ -150,6 +160,8 @@ function activate(context) {
             // Update current config if it was the one being edited
             if (currentConfig && currentConfig.name === selectedConfig.config.name) {
                 currentConfig = configs[index];
+                // Save the updated configuration
+                await context.globalState.update('lastRunConfig', currentConfig);
                 updateStatusBar();
             }
             vscode.window.showInformationMessage(`Updated configuration: ${newName}`);
@@ -188,6 +200,8 @@ function activate(context) {
             // Clear current config if it was the one being removed
             if (currentConfig && currentConfig.name === selectedConfig.config.name) {
                 currentConfig = undefined;
+                // Clear the saved configuration
+                await context.globalState.update('lastRunConfig', undefined);
                 updateStatusBar();
             }
             vscode.window.showInformationMessage(`Removed configuration: ${selectedConfig.config.name}`);
