@@ -9,5 +9,5 @@
     <circle cx="64" cy="64" r="20" fill="none" stroke="#007ACC" stroke-width="4" />
 
     <!-- Play button with outline -->
-    <path d="M48 40 L48 88 L88 64 Z" fill="#007ACC" stroke="#2D2D30" stroke-width="2" />
+    <path d="M48 40 L48 88 L88 64 Z" fill="#00cc81" stroke="#2D2D30" stroke-width="2" />
 </svg>

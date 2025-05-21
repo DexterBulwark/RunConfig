@@ -83,10 +83,18 @@ function activate(context) {
         if (!command) {
             return;
         }
+        const useNewTerminal = await vscode.window.showQuickPick(['Yes', 'No'], {
+            placeHolder: 'Should this configuration use a new terminal each time?',
+            title: 'Terminal Behavior'
+        });
+        if (!useNewTerminal) {
+            return;
+        }
         const config = {
             name,
             command,
-            type: 'custom'
+            type: 'custom',
+            useNewTerminal: useNewTerminal === 'Yes'
         };
         // Get current configurations
         const configs = vscode.workspace.getConfiguration('runConfig').get('customConfigurations') || [];
@@ -145,6 +153,13 @@ function activate(context) {
         if (!newCommand) {
             return;
         }
+        const useNewTerminal = await vscode.window.showQuickPick(['Yes', 'No'], {
+            placeHolder: 'Should this configuration use a new terminal each time?',
+            title: 'Terminal Behavior'
+        });
+        if (!useNewTerminal) {
+            return;
+        }
         // Get current configurations
         const configs = vscode.workspace.getConfiguration('runConfig').get('customConfigurations') || [];
         // Update the configuration
@@ -153,7 +168,8 @@ function activate(context) {
             configs[index] = {
                 name: newName,
                 command: newCommand,
-                type: 'custom'
+                type: 'custom',
+                useNewTerminal: useNewTerminal === 'Yes'
             };
             // Save to workspace settings
             await vscode.workspace.getConfiguration('runConfig').update('customConfigurations', configs, vscode.ConfigurationTarget.Workspace);
@@ -242,10 +258,21 @@ async function getRunConfigurations() {
 }
 function executeConfiguration(config) {
     try {
-        const terminal = vscode.window.createTerminal({
-            name: config.name,
-            env: config.env
-        });
+        let terminal;
+        if (config.useNewTerminal) {
+            terminal = vscode.window.createTerminal({
+                name: config.name,
+                env: config.env
+            });
+        }
+        else {
+            // Try to find an existing terminal with the same name
+            terminal = vscode.window.terminals.find(t => t.name === config.name) ||
+                vscode.window.createTerminal({
+                    name: config.name,
+                    env: config.env
+                });
+        }
         terminal.sendText(config.command);
         terminal.show();
     }
